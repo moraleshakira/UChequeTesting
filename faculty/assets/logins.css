@@ -1,0 +1,249 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
+
+:root {
+  
+  --white-color: hsl(0, 0%, 100%);
+  --bg: #212143;
+  --text:#BDBDBD;
+  --hover:#bbbbc0;
+  --black-color: hsl(0, 0%, 0%);
+
+  --body-font: "Poppins", sans-serif;
+  --h1-font-size: 1.75rem;
+  --normal-font-size: 1rem;
+  --small-font-size: .813rem;
+  
+  --font-medium: 500;
+}
+
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+input, button {
+  font-size: var(--normal-font-size);
+  font-family: var(--body-font);
+  border: none;
+  outline: none;
+}
+
+body {
+  font-size: var(--normal-font-size);
+  font-family: var(--body-font);
+  color: var(--white-color);
+  overflow:visible;
+  z-index: 11;
+}
+
+a {
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/*=============== LOGIN ===============*/
+.login {
+  position: relative;
+  height: 100vh;
+  display: grid;
+  align-items: center;
+}
+.login__img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.login__form {
+  position: relative;
+  background-color: hsla(0, 0%, 10%, 0.1);
+  border: 2px solid var(--white-color);
+  margin-inline: 1.5rem;
+  padding: 1.5rem 1.5rem;
+  border-radius: 1rem;
+  backdrop-filter: blur(3px);
+}
+
+.login__form .logo--cont { /*center logo */
+  width: 60%;
+  position: relative;
+  margin-left: 60px;
+}
+.login__title {
+  text-align: center;
+  font-size: var(--h1-font-size);
+  font-weight: var(--font-medium);
+  margin-top: 2rem;
+  color: #212143;
+}
+
+.login__content {
+  /* row-gap: 1.75rem; */
+  margin-bottom: 1.5rem; margin-top: 1rem;
+  /* overflow-y: auto; */
+  display: grid;
+}
+
+.login__box {
+  grid-template-columns: max-content 1fr;  column-gap: 0.75rem;
+  align-items: center;
+  display: grid;
+  border-bottom: 2px solid var(--white-color);
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+/* .login__input {
+  width: 100%;
+  padding-block: 1rem;
+  background: none;
+  color: var(--white-color);
+  position: relative;
+  z-index: 1;
+} */
+.login__input {
+  width: 100%; height: 50px;
+  padding: 1rem 0;
+  background: none;
+  color: var(--white-color);
+  position: relative;
+  z-index: 1;
+  border: none;
+  outline: none;
+}
+
+.login__box-input {
+  position: relative;
+}
+
+.login__label {
+  position: absolute;
+  left: 0;
+  top: 1rem; 
+  font-weight: var(--font-medium);
+  color: var(--text);
+  z-index: 10;
+  transition: transform 150ms ease-out, font-size 150ms ease-out;
+}
+
+      /* icons  */
+.login__eye {
+  position: absolute;
+  right: 0;
+  top: 18px;
+  z-index: 10;
+  cursor: pointer;   font-size: 1.25rem;
+}
+.login__icon{
+  font-size: 1.25rem;
+}
+
+.login__check {
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.login__check-group {
+  column-gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.login__check-input {
+  width: 16px;
+  height: 16px;
+}
+.login__check-label, .login__forgot, .login__register {
+  font-size: var(--small-font-size);
+}
+
+.login__box:nth-child(2) input {
+  padding-right: 1.8rem;
+}
+
+.login__forgot {
+  color: var(--white-color);
+}
+.login__forgot:hover {
+  text-decoration: underline;
+}
+
+.login__button {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--white-color);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+}
+
+.login__button:hover{
+  background: var(--hover);
+}
+
+/* Input move up label */
+.login__input:focus + .login__label,
+.login__input:not(:placeholder-shown) + .login__label {
+  transform: translateY(-1.5rem); /* Move up */
+  font-size: var(--small-font-size); /* Smaller font size */
+  color: var(--white-color); 
+}
+
+/* Input sticky top label */
+.login__input:not(:placeholder-shown).login__input:not(:focus) + .login__label {
+  top: 12px;
+  font-size: var(--small-font-size);
+}
+
+@media screen and (min-width: 1024px) {
+  .login {
+    justify-content: center;
+    align-items: center;
+  }
+  .login__form {
+    width: 450px;
+    height: auto;
+    padding: 1.5rem 2.5rem;
+    border-radius: 1.5rem;
+    backdrop-filter: blur(5px);
+  }
+  .login__title {
+    font-size: 2rem;
+  }
+  .login__button {
+    padding: 1.2rem;
+    font-size: 1.1rem;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .login {
+    justify-content: center;
+    align-items: center;
+  }
+  .login__form {
+    width: 320px; 
+    height: auto;
+    padding: 1.5rem 1.2rem; 
+    border-radius: 0.8rem;  
+    backdrop-filter: blur(4px);
+  }
+  .login__title {
+    font-size: 1.5rem; 
+  }
+  .login__button {
+    padding: 0.7rem; 
+    font-size: 0.9rem; 
+  }
+}
