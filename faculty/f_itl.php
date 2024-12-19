@@ -3,6 +3,12 @@ include('./includes/authentication.php');
 include('./includes/header.php');
 include('./includes/sidebar.php');
 include('./includes/topbar.php');
+
+if (!isset($_SESSION['auth_user']) || !isset($_SESSION['auth_user']['userId'])) {
+    die("Unauthorized access.");
+}
+
+$loggedInUserId = $_SESSION['auth_user']['userId'];
 ?>
 
 <div class="tabular--wrapper">
@@ -37,18 +43,26 @@ include('./includes/topbar.php');
                 INNER JOIN
                     employee_role ON employee.userId = employee_role.userId
                 WHERE 
-                    employee_role.role_id = 2
+                    employee_role.role_id = 2 AND employee.userId = ?
             ";
-            $totalResult = $con->query($totalQuery);
-            if (!$totalResult) {
-                die("Error executing query: " . $con->error);
+
+            $stmt = $con->prepare($totalQuery);
+            $stmt->bind_param('i', $loggedInUserId);
+            $stmt->execute();
+            $totalResult = $stmt->get_result();
+            $stmt->close();
+
+            if ($totalResult && $totalRow = $totalResult->fetch_assoc()) {
+                $totalRows = (int)$totalRow['total'];
+                $totalPages = ceil($totalRows / $limit);
+            } else {
+                $totalRows = 0;
+                $totalPages = 1;
             }
-            $totalRow = $totalResult->fetch_assoc();
-            $totalRows = isset($totalRow['total']) ? (int)$totalRow['total'] : 0;
-            $totalPages = ceil($totalRows / $limit);
 
             $sql = "
                 SELECT
+                    itl_extracted_data.id,
                     employee.employeeId, 
                     employee.firstName, 
                     employee.middleName, 
@@ -69,19 +83,18 @@ include('./includes/topbar.php');
                 INNER JOIN
                     semesters ON itl_extracted_data.semester_id = semesters.semester_id
                 WHERE
-                    employee_role.role_id = 2
-                LIMIT $limit OFFSET $offset
+                    employee_role.role_id = 2 AND employee.userId = ?
+                LIMIT ? OFFSET ?
             ";
 
-            $result = $con->query($sql);
+            $stmt = $con->prepare($sql);
+            $stmt->bind_param('iii', $loggedInUserId, $limit, $offset);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $stmt->close();
 
-            if (!$result) {
-                die("Error executing query: " . $con->error);
-            }
-
-            if ($result->num_rows > 0) {
+            if ($result && $result->num_rows > 0) {
                 while ($row = $result->fetch_assoc()) {
-                    $fullName = trim($row['firstName'] . ' ' . $row['middleName'] . ' ' . $row['lastName']);
                     echo '<tr>
                             <td>' . htmlspecialchars($row['designated']) . '</td>
                             <td>' . htmlspecialchars($row['academic_year']) . '</td> 
@@ -89,36 +102,36 @@ include('./includes/topbar.php');
                             <td>' . htmlspecialchars($row['totalOverload']) . '</td>
                             <td>
                                 <a href="edit-act.php?employee_id=' . htmlspecialchars($row['userId']) . '" class="action">Download</a>
-                                <a href="#1" class="action">Delete</a>
+                                <a href="#" class="action delete" data-id="' . htmlspecialchars($row['id']) . '">Delete</a>
                             </td>
-                          </tr>';
+                        </tr>';
                 }
             } else {
-                echo '<tr><td colspan="7">No users found.</td></tr>';
+                echo '<tr><td colspan="5">No records found.</td></tr>';
             }
             ?>
         </tbody>
     </table>
 
-    <div class="pagination" id="pagination">
-        <?php
-        if ($totalPages > 1) {
-            echo '<a href="?page=1" class="pagination-button">&laquo;</a>';
-            $prevPage = max(1, $page - 1);
-            echo '<a href="?page=' . $prevPage . '" class="pagination-button">&lsaquo;</a>';
+        <div class="pagination" id="pagination">
+            <?php
+            if ($totalPages > 1) {
+                echo '<a href="?page=1" class="pagination-button">&laquo;</a>';
+                $prevPage = max(1, $page - 1);
+                echo '<a href="?page=' . $prevPage . '" class="pagination-button">&lsaquo;</a>';
 
-            for ($i = 1; $i <= $totalPages; $i++) {
-                $activeClass = ($i == $page) ? 'active' : '';
-                echo '<a href="?page=' . $i . '" class="pagination-button ' . $activeClass . '">' . $i . '</a>';
+                for ($i = 1; $i <= $totalPages; $i++) {
+                    $activeClass = ($i == $page) ? 'active' : '';
+                    echo '<a href="?page=' . $i . '" class="pagination-button ' . $activeClass . '">' . $i . '</a>';
+                }
+
+                $nextPage = min($totalPages, $page + 1);
+                echo '<a href="?page=' . $nextPage . '" class="pagination-button">&rsaquo;</a>';
+                echo '<a href="?page=' . $totalPages . '" class="pagination-button">&raquo;</a>';
             }
-
-            $nextPage = min($totalPages, $page + 1);
-            echo '<a href="?page=' . $nextPage . '" class="pagination-button">&rsaquo;</a>';
-            echo '<a href="?page=' . $totalPages . '" class="pagination-button">&raquo;</a>';
-        }
-        ?>
+            ?>
+        </div>
     </div>
-</div>
 </div>
 
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
@@ -170,3 +183,48 @@ include('./includes/topbar.php');
 <?php
 include('./includes/footer.php');
 ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const msg = urlParams.get('msg');
+
+        if (msg === 'success') {
+            Swal.fire({
+                title: 'Deleted!',
+                text: 'The record has been successfully deleted.',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            });
+        } else if (msg === 'error') {
+            Swal.fire({
+                title: 'Error!',
+                text: 'There was an error deleting the record.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+
+        const deleteLinks = document.querySelectorAll('.delete');
+        
+        deleteLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault(); 
+                const itlExtractedDataId = this.getAttribute('data-id'); 
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'No, cancel!',
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = './controller/delete-itl.php?itl_extracted_data_id=' + itlExtractedDataId;
+                    }
+                });
+            });
+        });
+    });
+</script>

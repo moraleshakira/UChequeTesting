@@ -82,7 +82,7 @@ include('./includes/topbar.php');
         JOIN academic_years a ON d.academic_year_id = a.academic_year_id
         JOIN semesters s ON d.semester_id = s.semester_id
         LEFT JOIN itl_extracted_data itl ON d.userId = itl.userId
-        WHERE d.userId = ?";  // Filter for logged-in user only
+        WHERE d.userId = ?"; 
 
         if (!empty($academic_year)) {
             $query .= " AND d.academic_year_id = $academic_year";
@@ -92,7 +92,6 @@ include('./includes/topbar.php');
             $query .= " AND d.semester_id = $semester";
         }
 
-        // Prepare and execute the query with the user ID
         $stmt = $con->prepare($query);
         $stmt->bind_param("i", $loggedInUserId);
         $stmt->execute();
@@ -127,76 +126,83 @@ include('./includes/topbar.php');
                 </tr>
             </thead>
             <tbody id="table-body">
-                <?php 
-                $processedUsers = [];
-                while ($row = $result->fetch_assoc()): 
-                    if (in_array($row['userId'], $processedUsers)) {
-                        continue;
+            <?php 
+            $processedUsers = [];
+            $hasData = false;
+
+            while ($row = $result->fetch_assoc()): 
+                $hasData = true;
+                if (in_array($row['userId'], $processedUsers)) {
+                    continue;
+                }
+                $processedUsers[] = $row['userId'];
+            ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($row['employeeId']); ?></td>
+                    <td><?php echo htmlspecialchars($row['firstName'] . ' ' . $row['lastName']); ?></td>
+                    <td><?php echo htmlspecialchars($row['designated'] ?? 'N/A'); ?></td>
+
+                    <?php
+                    $firstSemMonths = ['August', 'September', 'October', 'November', 'December'];
+                    $secondSemMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July'];
+
+                    $userEntries = $con->query("SELECT * FROM dtr_extracted_data 
+                        WHERE userId = {$row['userId']}");
+
+                    $monthData = array_fill_keys(array_merge($firstSemMonths, $secondSemMonths), 
+                        ['credits' => 0, 'overload' => 0]);
+
+                    while ($entry = $userEntries->fetch_assoc()) {
+                        $monthYear = date('F', strtotime($entry['month_year']));
+                        
+                        $totalCredits = 0;
+                        $weekOverloads = 0;
+
+                        foreach (['week1_overload', 'week2_overload', 'week3_overload', 'week4_overload'] as $week) {
+                            $weekOverloads += $entry[$week];
+                            if ($entry[$week] > $creditThreshold) {
+                                $totalCredits += ($entry[$week] - $creditThreshold);
+                            }
+                        }
+
+                        if ($totalCredits > 0) {
+                            $weekOverloads -= $totalCredits;
+                            if ($weekOverloads < 0) {
+                                $weekOverloads = 0;
+                            }
+                        }
+
+                        $monthData[$monthYear] = [
+                            'credits' => $totalCredits,
+                            'overload' => $weekOverloads
+                        ];
                     }
-                    $processedUsers[] = $row['userId'];
-                ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($row['employeeId']); ?></td>
-                        <td><?php echo htmlspecialchars($row['firstName'] . ' ' . $row['lastName']); ?></td>
-                        <td><?php echo htmlspecialchars($row['designated'] ?? 'N/A'); ?></td>
 
-                        <?php
-                        $firstSemMonths = ['August', 'September', 'October', 'November', 'December'];
-                        $secondSemMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July'];
-
-                        $userEntries = $con->query("SELECT * FROM dtr_extracted_data 
-                            WHERE userId = {$row['userId']}");
-
-                        $monthData = array_fill_keys(array_merge($firstSemMonths, $secondSemMonths), 
-                            ['credits' => 0, 'overload' => 0]);
-
-                        while ($entry = $userEntries->fetch_assoc()) {
-                            $monthYear = date('F', strtotime($entry['month_year']));
-                            
-                            $totalCredits = 0;
-                            $weekOverloads = 0;
-
-                            foreach (['week1_overload', 'week2_overload', 'week3_overload', 'week4_overload'] as $week) {
-                                $weekOverloads += $entry[$week];
-                                if ($entry[$week] > $creditThreshold) {
-                                    $totalCredits += ($entry[$week] - $creditThreshold);
-                                }
-                            }
-
-                            if ($totalCredits > 0) {
-                                $weekOverloads -= $totalCredits;
-                                if ($weekOverloads < 0) {
-                                    $weekOverloads = 0;
-                                }
-                            }
-
-                            $monthData[$monthYear] = [
-                                'credits' => $totalCredits,
-                                'overload' => $weekOverloads
-                            ];
+                    foreach ($firstSemMonths as $month) {
+                        echo "<td class='first-sem'>";
+                        if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
+                            echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
+                            echo "Overload: " . $monthData[$month]['overload'];
                         }
+                        echo "</td>";
+                    }
 
-                        foreach ($firstSemMonths as $month) {
-                            echo "<td class='first-sem'>";
-                            if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
-                                echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
-                                echo "Overload: " . $monthData[$month]['overload'];
-                            }
-                            echo "</td>";
+                    foreach ($secondSemMonths as $month) {
+                        echo "<td class='second-sem'>";
+                        if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
+                            echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
+                            echo "Overload: " . $monthData[$month]['overload'];
                         }
+                        echo "</td>";
+                    }
+                    ?>
+                </tr>
+            <?php endwhile; ?>
+            <?php if (!$hasData): ?>
+                <tr><td colspan="12" class="text-center">No records found.</td></tr>
+            <?php endif; ?>
+        </tbody>
 
-                        foreach ($secondSemMonths as $month) {
-                            echo "<td class='second-sem'>";
-                            if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
-                                echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
-                                echo "Overload: " . $monthData[$month]['overload'];
-                            }
-                            echo "</td>";
-                        }
-                        ?>
-                    </tr>
-                <?php endwhile; ?>
-            </tbody>
         </table>
         <div class="pagination" id="pagination"></div>
     </div>

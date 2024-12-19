@@ -101,7 +101,7 @@ include('./includes/topbar.php');
             $order = isset($_GET['order']) ? $_GET['order'] : 'asc';
 
             $maxHours = 40; // REGULAR HRS
-            $creditThreshold = 12;  // MAXIMUM ALLOWED POLICY
+            $creditThreshold = 12; 
             
             $query = "SELECT d.id, d.userId, d.academic_year_id, d.semester_id, 
                 d.week1, d.week2, d.week3, d.week4, d.week5, d.overall_total, 
@@ -190,6 +190,7 @@ include('./includes/topbar.php');
                     </tr>
                 </thead>
                 <tbody>
+                <?php if ($result->num_rows > 0): ?>
                     <?php while ($row = $result->fetch_assoc()):
                         $weeks = [                        //WEEK HRS
                             'week1' => $row['week1'],
@@ -287,6 +288,11 @@ include('./includes/topbar.php');
                         </td>
                     </tr>
                     <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="12" style="text-align:center;">No records found</td>
+                        </tr>
+                    <?php endif; ?>
                 </tbody>
             </table>
 

@@ -52,7 +52,7 @@ $loggedInUserId = $_SESSION['auth_user']['userId'];
                             a.academic_year, s.semester_name, 
                             COALESCE(itl.totalOverload, 0) AS totalOverload,
                             itl.designated,
-                            d.week1_overload, d.week2_overload, d.week3_overload, d.week4_overload
+                        d.week1_overload, d.week2_overload, d.week3_overload, d.week4_overload
                         FROM dtr_extracted_data d
                         JOIN employee e ON d.userId = e.userId
                         JOIN academic_years a ON d.academic_year_id = a.academic_year_id
@@ -122,85 +122,99 @@ $loggedInUserId = $_SESSION['auth_user']['userId'];
                 </tr>
             </thead>
             <tbody>
-            <?php while ($row = $result->fetch_assoc()):
-                $weeks = [
-                    'week1' => $row['week1'],
-                    'week2' => $row['week2'],
-                    'week3' => $row['week3'],
-                    'week4' => $row['week4'],
-                    'week5' => $row['week5'],
-                ];
+            <?php if ($result->num_rows > 0): ?>
+                <?php while ($row = $result->fetch_assoc()):
+                    $weeks = [
+                        'week1' => $row['week1'],
+                        'week2' => $row['week2'],
+                        'week3' => $row['week3'],
+                        'week4' => $row['week4'],
+                        'week5' => $row['week5'],
+                    ];
 
-                $totalOverload = $row['totalOverload'];
-                $excess = []; 
-                $overload = []; 
+                    $totalOverload = $row['totalOverload'];
+                    $excess = []; 
+                    $overload = []; 
 
-                foreach ($weeks as $key => $weekHours) {
-                    if ($weekHours > $maxHours) {
-                        $overload[$key] = round($weekHours - $maxHours, 2);
-                        $excess[$key] = round($weekHours - $maxHours - $totalOverload, 2);
-                    } else {
-                        $overload[$key] = 0;
-                        $excess[$key] = 0;
+                    foreach ($weeks as $key => $weekHours) {
+                        if ($weekHours > $maxHours) {
+                            $overload[$key] = round($weekHours - $maxHours, 2);
+                            $excess[$key] = round($weekHours - $maxHours - $totalOverload, 2);
+                        } else {
+                            $overload[$key] = 0;
+                            $excess[$key] = 0;
+                        }
                     }
-                }
 
-                $totalCredits = 0;
-                $weekOverloads = 0;
+                    $totalCredits = 0;
+                    $weekOverloads = 0;
 
-                foreach (['week1_overload', 'week2_overload', 'week3_overload', 'week4_overload'] as $week) {
-                    $weekOverloads += $row[$week];
-                    if ($row[$week] > 12) {
-                        $totalCredits += ($row[$week] - 12);
+                    foreach (['week1_overload', 'week2_overload', 'week3_overload', 'week4_overload'] as $week) {
+                        $weekOverloads += $row[$week];
+                        if ($row[$week] > 12) {
+                            $totalCredits += ($row[$week] - 12);
+                        }
                     }
-                }
 
-                if ($totalCredits > 0) {
-                    $weekOverloads -= $totalCredits;
-                    if ($weekOverloads < 0) {
-                        $weekOverloads = 0;
+                    if ($totalCredits > 0) {
+                        $weekOverloads -= $totalCredits;
+                        if ($weekOverloads < 0) {
+                            $weekOverloads = 0;
+                        }
                     }
-                }
-            ?>
+                ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($row['academic_year']); ?></td>
+                        <td><?php echo htmlspecialchars($row['semester_name']); ?></td>
+                        <td><?php echo htmlspecialchars($row['month_year']); ?></td>
+                        <td><?php echo ($totalCredits > 0) ? $totalCredits : '0'; ?></td>
+                        <td><?php echo ($weekOverloads > 0) ? $weekOverloads : '0'; ?></td>
+                        <td>
+                            <a href="#">Download</a> |
+                            <a href="#" onclick="confirmDelete(<?php echo htmlspecialchars($row['id']); ?>)">Delete</a>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            <?php else: ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($row['academic_year']); ?></td>
-                    <td><?php echo htmlspecialchars($row['semester_name']); ?></td>
-                    <td><?php echo htmlspecialchars($row['month_year']); ?></td>
-                    <td><?php echo ($totalCredits > 0) ? $totalCredits : '0'; ?></td>
-                    <td><?php echo ($weekOverloads > 0) ? $weekOverloads : '0'; ?></td>
-                    <td>
-                                    <a href="#">Download</a> |
-                                    <a href="#" onclick="confirmDelete(<?php echo htmlspecialchars($row['id']); ?>)">Delete</a>
-                                </td>
+                    <td colspan="6" class="text-center">No records found.</td>
                 </tr>
-            <?php endwhile; ?>
+            <?php endif; ?>
             </tbody>
         </table>
 
+
         </div>
         </div>
 
-<?php
-include('./includes/footer.php');
-?>
+    <?php
+    include('./includes/footer.php');
+    ?>
  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
-<script>
+ <script>
     document.getElementById('requestForm').addEventListener('submit', function (e) {
-    const startMonth = document.getElementById('startMonth').value;
-    const endMonth = document.getElementById('endMonth').value;
+        const startMonth = document.getElementById('startMonth').value;
+        const endMonth = document.getElementById('endMonth').value;
 
-    const monthOrder = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
+        const monthOrder = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
 
-    if (monthOrder.indexOf(startMonth) > monthOrder.indexOf(endMonth)) {
-        e.preventDefault();
-        alert("Error: Starting month must be before or the same as the ending month.");
-    }
-});
+        if (monthOrder.indexOf(startMonth) > monthOrder.indexOf(endMonth)) {
+            e.preventDefault();
+            alert("Error: Starting month must be before or the same as the ending month.");
+        } else {
+            Swal.fire({
+                title: 'Success!',
+                text: 'The request was submitted successfully.',
+                icon: 'success',
+                confirmButtonColor: '#3085d6',
+            });
+        }
+    });
 
-const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('deleted') && urlParams.get('deleted') === 'true') {
         Swal.fire({
             title: 'Deleted!',
@@ -221,10 +235,8 @@ const urlParams = new URLSearchParams(window.location.search);
             confirmButtonText: 'Yes, delete it!',
         }).then((result) => {
             if (result.isConfirmed) {
-                window.location.href = "f_dtr.php?id=" + id;
+                window.location.href = "f_dtr.php?id=" + id + "&deleted=true";
             }
         });
     }
-
- </script>
-
+</script>

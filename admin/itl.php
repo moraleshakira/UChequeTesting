@@ -116,6 +116,7 @@ include('./includes/topbar.php');
 
                 $sql = "
                     SELECT
+                        itl_extracted_data.id,
                         employee.employeeId,
                         employee.firstName,
                         employee.middleName,
@@ -135,38 +136,44 @@ include('./includes/topbar.php');
                     ORDER BY $sortColumn $order
                     LIMIT $limit OFFSET $offset";
 
-
                 $result = $con->query($sql);
 
                 if ($result && $result->num_rows > 0) {
-                    $counter = $offset;
+                    $counter = $offset; 
                     while ($row = $result->fetch_assoc()) {
+                        $totalOverload = $row['totalOverload'];
+                        if ($totalOverload <= 0) {
+                            continue; 
+                        }
+
                         $counter++;
+
                         $fullName = trim($row['firstName'] . ' ' . $row['middleName'] . ' ' . $row['lastName']);
-                        $totalOverload = ($row['totalOverload'] <= 0) ? "No overload" : htmlspecialchars($row['totalOverload']);
-                        
+                        $totalOverloadDisplay = htmlspecialchars($totalOverload);
                         $filePath = htmlspecialchars($row['filePath']);
                         $downloadLink = !empty($filePath) ? 'uploads/' . $filePath : '#';
                         $downloadDisabled = empty($filePath) ? 'style="pointer-events: none; color: gray;"' : '';
 
                         echo "<tr>
-                                <td>$counter</td>
-                                <td>$fullName</td>
-                                <td>" . htmlspecialchars($row['designated']) . "</td>
-                                <td>" . htmlspecialchars($row['academic_year']) . "</td>
-                                <td>" . htmlspecialchars($row['semester_name']) . "</td>
-                                <td>$totalOverload</td>
-                                <td>
-                                    <a href='$downloadLink' class='action' download $downloadDisabled>Download</a>
-                                    <a href='controller/delete-itl.php' class='action'>Delete</a>
-                                </td>
-                            </tr>";
+                            <td>$counter</td>
+                            <td>$fullName</td>
+                            <td>" . htmlspecialchars($row['designated']) . "</td>
+                            <td>" . htmlspecialchars($row['academic_year']) . "</td>
+                            <td>" . htmlspecialchars($row['semester_name']) . "</td>
+                            <td>$totalOverloadDisplay</td>
+                            <td>
+                                <a href='" . (!empty($filePath) ? 'uploads/' . htmlspecialchars($filePath) : '#') . "' class='action' download " . (empty($filePath) ? 'style="pointer-events: none; color: gray;"' : '') . ">Download</a>
+                                <a href='javascript:void(0);' class='action' onclick='confirmDelete(" . htmlspecialchars($row['id']) . ")'>Delete</a>
+                            </td>
+                        </tr>";
                     }
                 } else {
                     echo "<tr><td colspan='7'>No users found.</td></tr>";
                 }
                 ?>
             </tbody>
+
+
         </table>
 
         <div class="pagination">
@@ -258,3 +265,29 @@ include('./includes/footer.php');
 </div>
 
 <?php include('./includes/footer.php'); ?>
+<script>
+function confirmDelete(id) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!',
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = "controller/delete-itl.php?id=" + id;
+        }
+    });
+}
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('deleted') && urlParams.get('deleted') === 'true') {
+        Swal.fire({
+            title: 'Deleted!',
+            text: 'The record has been deleted successfully.',
+            icon: 'success',
+            confirmButtonColor: '#3085d6',
+        });
+    }
+</script>
