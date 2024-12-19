@@ -3,195 +3,287 @@ include('./includes/authentication.php');
 include('./includes/header.php');
 include('./includes/sidebar.php');
 include('./includes/topbar.php');
+
 ?>
-              <div class="tabular--wrapper">
-                <div class="add">
-                  <div class="filter">
-                    <select id="role">
-                        <option value="" disabled selected>For the Month of</option>
-                        <option value="option1">January</option>
-                        <option value="option2">February</option>
-                        <option value="option3">March</option>
-                        <option value="option4">April</option>
-                        <option value="option5">May</option>
-                        <option value="option6">June</option>
-                        <option value="option7">July</option>
-                        <option value="option8">August</option>
-                        <option value="option9">September</option>
-                        <option value="option10">October</option>
-                        <option value="option11">November</option>
-                        <option value="option12">December </option>
-                    </select>
-                  </div>
-                  <div class="filter">
-                        <select id="role">
-                            <option value="" disabled selected>Select Academic Year</option>
-                            <option value="option1">2024-2025</option>
-                            <option value="option2">2025-2026</option>
-                            <option value="option3">2026-2027</option>
-                        </select>
-                  </div>
-                  <div class="filter">
-                        <select id="role">
-                            <option value="" disabled selected>Select Academic Semester</option>
-                            <option value="option1">1st Semester</option>
-                            <option value="option2">2nd Semester</option>
-                        </select>
-                  </div>
-                  
-                  
-                </div>
-                          
-             
-               <div class="table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Faculty</th>
-                        <th>Designation</th>
-                        <th>January</th>
-                        <th>Febuary</th>
-                        <th>March</th>
-                        <th>Action</th>
-                      </tr>
-                      <tbody>
+<div class="tabular--wrapper">
+    <div class="add">
+
+        <?php
+        $sql = "SELECT academic_year_id, academic_year FROM academic_years";
+        $result = $con->query($sql);
+        if ($result->num_rows > 0) {
+            $academicYears = [];
+            while ($row = $result->fetch_assoc()) {
+                $academicYears[] = $row;
+            }
+        } else {
+            echo "No academic years found.";
+        }
+        ?>
+        <div class="filter">
+            <select id="academic_year" onchange="updateTable()">
+                <option value="" disabled selected>Select Academic Year</option>
+                <?php
+                foreach ($academicYears as $year) {
+                    echo '<option value="' . $year['academic_year_id'] . '">' . $year['academic_year'] . '</option>';
+                }
+                ?>
+            </select>
+        </div>
+
+        <?php
+        $sql = "SELECT semester_id, semester_name FROM semesters";
+        $result = $con->query($sql);
+        if ($result->num_rows > 0) {
+            $semesters = [];
+            while ($row = $result->fetch_assoc()) {
+                $semesters[] = $row;
+            }
+        } else {
+            echo "<option value=''>No semesters found</option>";
+        }
+        ?>
+
+        <div class="filter">
+            <select id="semester" onchange="updateTable()">
+                <option value="" disabled>Select Academic Semester</option>
+                <?php
+                foreach ($semesters as $semester) {
+                    if ($semester['semester_id'] == 1) {
+                        echo '<option value="' . $semester['semester_id'] . '" selected>' . $semester['semester_name'] . '</option>';
+                    } else {
+                        echo '<option value="' . $semester['semester_id'] . '">' . $semester['semester_name'] . '</option>';
+                    }
+                }
+                ?>
+            </select>
+        </div>
+    </div>
+    <?php
+        $academic_year = isset($_GET['academic_year']) ? $_GET['academic_year'] : '';
+        $semester = isset($_GET['semester']) ? $_GET['semester'] : '';
+        
+        // Get the logged-in user's ID from the session
+        $loggedInUserId = $_SESSION['auth_user']['userId'];
+
+        $maxHours = 40;
+        $creditThreshold = 12;
+
+        $query = "SELECT d.id, d.userId, d.academic_year_id, d.semester_id, 
+            d.week1, d.week2, d.week3, d.week4, d.week5, d.overall_total, 
+            d.fileName, d.month_year, 
+            e.firstName, e.middleName, e.lastName, e.employeeId,
+            a.academic_year, s.semester_name, 
+            COALESCE(itl.totalOverload, 0) AS totalOverload,
+            itl.designated,
+            d.week1_overload, d.week2_overload, d.week3_overload, d.week4_overload
+        FROM dtr_extracted_data d
+        JOIN employee e ON d.userId = e.userId
+        JOIN academic_years a ON d.academic_year_id = a.academic_year_id
+        JOIN semesters s ON d.semester_id = s.semester_id
+        LEFT JOIN itl_extracted_data itl ON d.userId = itl.userId
+        WHERE d.userId = ?";  // Filter for logged-in user only
+
+        if (!empty($academic_year)) {
+            $query .= " AND d.academic_year_id = $academic_year";
+        }
+
+        if (!empty($semester)) {
+            $query .= " AND d.semester_id = $semester";
+        }
+
+        // Prepare and execute the query with the user ID
+        $stmt = $con->prepare($query);
+        $stmt->bind_param("i", $loggedInUserId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if (!$result) {
+            die("Error fetching data: " . $con->error);
+        }
+    ?>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                <th>ID</th>
+                    <th>Faculty</th>
+                    <th>Designation</th>
+                    <!-- First Semester Months -->
+                    <th class="first-sem">August</th>
+                    <th class="first-sem">September</th>
+                    <th class="first-sem">October</th>
+                    <th class="first-sem">November</th>
+                    <th class="first-sem">December</th>
+                    <!-- Second Semester Months -->
+                    <th class="second-sem">January</th>
+                    <th class="second-sem">February</th>
+                    <th class="second-sem">March</th>
+                    <th class="second-sem">April</th>
+                    <th class="second-sem">May</th>
+                    <th class="second-sem">June</th>
+                    <th class="second-sem">July</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <?php 
+                $processedUsers = [];
+                while ($row = $result->fetch_assoc()): 
+                    if (in_array($row['userId'], $processedUsers)) {
+                        continue;
+                    }
+                    $processedUsers[] = $row['userId'];
+                ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($row['employeeId']); ?></td>
+                        <td><?php echo htmlspecialchars($row['firstName'] . ' ' . $row['lastName']); ?></td>
+                        <td><?php echo htmlspecialchars($row['designated'] ?? 'N/A'); ?></td>
+
                         <?php
-                        include '../config/config.php';
-                        $limit = 5;
+                        $firstSemMonths = ['August', 'September', 'October', 'November', 'December'];
+                        $secondSemMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July'];
 
-                        $totalResult = $con->query("SELECT COUNT(*) AS total FROM employee");
-                        $totalRows = $totalResult->fetch_assoc()['total'];
-                        $totalPages = ceil($totalRows / $limit);
+                        $userEntries = $con->query("SELECT * FROM dtr_extracted_data 
+                            WHERE userId = {$row['userId']}");
 
-                        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-                        $page = max($page, 1); 
-                       
-                        $offset = ($page - 1) * $limit;
+                        $monthData = array_fill_keys(array_merge($firstSemMonths, $secondSemMonths), 
+                            ['credits' => 0, 'overload' => 0]);
 
-                        $sql = "SELECT employeeId, firstName, middleName, lastName, pdf_file_name FROM employee WHERE role = 'Faculty' LIMIT $limit OFFSET $offset" ;
-                        $result = $con->query($sql);
+                        while ($entry = $userEntries->fetch_assoc()) {
+                            $monthYear = date('F', strtotime($entry['month_year']));
+                            
+                            $totalCredits = 0;
+                            $weekOverloads = 0;
 
-                        if ($result->num_rows > 0) {
-                            while ($row = $result->fetch_assoc()) {
-                                $fullName = $row['firstName'] . ' ' . $row['middleName'] . ' ' . $row['lastName'];
-                                echo '<tr>
-                                        <td>' . $row['employeeId'] . '</td>
-                                        <td>' . $fullName . '</td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td>';
-
-                           
-                                echo '</td>
-                                        <td>
-                                            <button id="openModalBtn"  class="pointer-btn" data-id="' . $row['employeeId'] . '" data-name="' . $fullName . '">
-                                               <i class="bx bxs-printer" style="width: 20px;"></i>
-                                            </button>
-                                           
-
-                                        </td>
-                                    </tr>';
+                            foreach (['week1_overload', 'week2_overload', 'week3_overload', 'week4_overload'] as $week) {
+                                $weekOverloads += $entry[$week];
+                                if ($entry[$week] > $creditThreshold) {
+                                    $totalCredits += ($entry[$week] - $creditThreshold);
+                                }
                             }
-                        } else {
-                            echo '<tr><td colspan="7">No faculty members found.</td></tr>';
+
+                            if ($totalCredits > 0) {
+                                $weekOverloads -= $totalCredits;
+                                if ($weekOverloads < 0) {
+                                    $weekOverloads = 0;
+                                }
+                            }
+
+                            $monthData[$monthYear] = [
+                                'credits' => $totalCredits,
+                                'overload' => $weekOverloads
+                            ];
                         }
 
-                        $con->close();
+                        foreach ($firstSemMonths as $month) {
+                            echo "<td class='first-sem'>";
+                            if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
+                                echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
+                                echo "Overload: " . $monthData[$month]['overload'];
+                            }
+                            echo "</td>";
+                        }
+
+                        foreach ($secondSemMonths as $month) {
+                            echo "<td class='second-sem'>";
+                            if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
+                                echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
+                                echo "Overload: " . $monthData[$month]['overload'];
+                            }
+                            echo "</td>";
+                        }
                         ?>
-                    </tbody>
-                    </thead>
-                  </table>
-                  <div class="pagination" id="pagination">
-                  <?php
-                      if ($totalPages > 1) {
-                          // First and Previous buttons
-                          echo '<a href="?page=1" class="pagination-button">&laquo;</a>';
-                          $prevPage = max(1, $page - 1);
-                          echo '<a href="?page=' . $prevPage . '" class="pagination-button">&lsaquo;</a>';
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+        <div class="pagination" id="pagination"></div>
+    </div>
 
-                          // Numbered page links
-                          for ($i = 1; $i <= $totalPages; $i++) {
-                              $activeClass = ($i == $page) ? 'active' : '';
-                              echo '<a href="?page=' . $i . '" class="pagination-button ' . $activeClass . '">' . $i . '</a>';
-                          }
-
-                          // Next and Last buttons
-                          $nextPage = min($totalPages, $page + 1);
-                          echo '<a href="?page=' . $nextPage . '" class="pagination-button">&rsaquo;</a>';
-                          echo '<a href="?page=' . $totalPages . '" class="pagination-button">&raquo;</a>';
-                      }
-                  ?>
-                </div>
-               </div>
-
-               <!-- Modal -->
-              <div id="fillUpModal" class="modal" style="display: none;">
-                  <div class="modal-content">
-                      <span class="close-btn">&times;</span>
-                      <h2>Upload ITL file</h2>
-                      <form id="fillUpForm" action="process_form.php" method="POST" enctype="multipart/form-data">
-                          <label for="fullName">Name</label>
-                          <input type="text" id="fullName" name="fullName" readonly>
-
-                          <label for="id">ID</label>
-                          <input type="text" id="id" name="id" readonly>
-
-                          <label for="academicYear">Academic Year:</label>
-                          <select id="academicYear" name="academicYear" required>
-                              <option value="">Select Academic Year</option>
-                              <?php
-                              $currentYear = date("Y");
-                              for ($i = 0; $i < 5; $i++) { 
-                                  $startYear = $currentYear - $i;
-                                  $endYear = $startYear + 1;
-                                  echo "<option value='{$startYear}-{$endYear}'>{$startYear}-{$endYear}</option>";
-                              }
-                              ?>
-                          </select>
-
-                          <label for="academicSemester">Academic Semester:</label>
-                          <select id="academicSemester" name="academicSemester" required>
-                              <option value="">Select Semester</option>
-                              <option value="First Semester">First Semester</option>
-                              <option value="Second Semester">Second Semester</option>
-                              <option value="Summer Semester">Summer Semester</option>
-                          </select>
-
-                          <label for="month">For the Month of:</label>
-                          <select id="month" name="month" required>
-                              <option value="">Select Month</option>
-                              <option value="January">January</option>
-                              <option value="February">February</option>
-                              <option value="March">March</option>
-                              <option value="April">April</option>
-                              <option value="May">May</option>
-                              <option value="June">June</option>
-                              <option value="July">July</option>
-                              <option value="August">August</option>
-                              <option value="September">September</option>
-                              <option value="October">October</option>
-                              <option value="November">November</option>
-                              <option value="December">December</option>
-                          </select>
-
-
-                          <label for="uploadFile">Upload File:</label>
-                          <input type="file" id="uploadFile" name="uploadFile" accept=".pdf,.docx,.txt" required>
-
-                          <button type="submit">Submit</button>
-                      </form>
-                  </div>
-              </div>
-
-                </div>
-              </div>
-            </div>
-                     
+</div>
 <?php
 include('./includes/footer.php');
 ?>
-    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let semester = document.getElementById("semester").value;
+    if (!semester) {
+        document.getElementById("semester").value = 1;
+        semester = 1; 
+    }
+    updateTable();
+});
 
- 
+function updateTable() {
+    let semester = document.getElementById("semester").value;
+    let firstSemCells = document.getElementsByClassName('first-sem');
+    let secondSemCells = document.getElementsByClassName('second-sem');
+
+    for (let cell of firstSemCells) {
+        cell.style.display = 'none';
+    }
+    for (let cell of secondSemCells) {
+        cell.style.display = 'none';
+    }
+
+    if (semester == 1) {
+        for (let cell of firstSemCells) {
+            cell.style.display = 'table-cell';
+        }
+    } else if (semester == 2) {
+        for (let cell of secondSemCells) {
+            cell.style.display = 'table-cell';
+        }
+    }
+
+    let academicYear = document.getElementById("academic_year").value;
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", "fetch_data.php?semester=" + semester + "&academic_year=" + academicYear, true);
+    xhr.onload = function() {
+        if (xhr.status == 200) {
+            let data = JSON.parse(xhr.responseText);
+            let tableBody = document.getElementById("table-body");
+            tableBody.innerHTML = '';
+
+            data.forEach(function(row) {
+                let tr = document.createElement("tr");
+                let basicCells = `
+                    <td>${row.employeeId}</td>
+                    <td>${row.firstName} ${row.lastName}</td>
+                    <td>${row.designated || 'N/A'}</td>
+                `;
+
+                let firstSemCells = `
+                    <td class="first-sem">${formatMonthData(row.august)}</td>
+                    <td class="first-sem">${formatMonthData(row.september)}</td>
+                    <td class="first-sem">${formatMonthData(row.october)}</td>
+                    <td class="first-sem">${formatMonthData(row.november)}</td>
+                    <td class="first-sem">${formatMonthData(row.december)}</td>
+                `;
+
+                let secondSemCells = `
+                    <td class="second-sem">${formatMonthData(row.january)}</td>
+                    <td class="second-sem">${formatMonthData(row.february)}</td>
+                    <td class="second-sem">${formatMonthData(row.march)}</td>
+                    <td class="second-sem">${formatMonthData(row.april)}</td>
+                    <td class="second-sem">${formatMonthData(row.may)}</td>
+                    <td class="second-sem">${formatMonthData(row.june)}</td>
+                    <td class="second-sem">${formatMonthData(row.july)}</td>
+                `;
+
+                tr.innerHTML = basicCells + firstSemCells + secondSemCells;
+                tableBody.appendChild(tr);
+            });
+
+            updateTable();
+        }
+    };
+    xhr.send();
+}
+
+function formatMonthData(data) {
+    if (!data) return '';
+    return `Total Credits: ${data.credits}<br>Overload: ${data.overload}`;
+}
+</script>

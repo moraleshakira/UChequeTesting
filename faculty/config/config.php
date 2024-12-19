@@ -3,7 +3,7 @@
 $host = "localhost";
 $username = "root";
 $password = "";
-$database = "ucheque2";
+$database = "ucheque";
 
 $con = mysqli_connect("$host", "$username", "$password", "$database");
 

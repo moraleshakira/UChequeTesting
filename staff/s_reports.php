@@ -17,7 +17,7 @@ include('./includes/topbar.php');
             <div class="card-body">
                 <form method="POST" action="./controller/submit_request.php">
                 <div class="form-group">
-                    <label for="request_type" class="form-label">Type of Request</label>
+                    <label for="request_type" class="form-label">Type of Request <span style="color:red;">*</span></label>
                     <select class="form-control" id="request_type" name="request_type" required>
                         <option value="" disabled selected>Select Type of Request</option>
                         <option value="Request for CTO">Request for CTO/Service Credits</option>
@@ -26,7 +26,7 @@ include('./includes/topbar.php');
                 </div>
 
                 <div class="form-group">
-                    <label for="employee" class="form-label">Select Employee</label>
+                    <label for="employee" class="form-label">Select Employee <span style="color:red;">*</span></label>
                     <select class="form-control" id="employee" name="employee_id[]" required>
                      <option value="" selected>Select Faculty</option>
                         <?php
@@ -49,7 +49,7 @@ include('./includes/topbar.php');
                 </div>
         
                     <div class="form-group">
-                        <label for="semester" class="form-label">Select Semester</label>
+                        <label for="semester" class="form-label">Select Semester <span style="color:red;">*</span></label>
                         <select class="form-control" id="semester" name="semester_id" required>
                             <option value="" selected>Select Semester</option>
                             <?php
@@ -68,7 +68,7 @@ include('./includes/topbar.php');
                     </div>
 
                     <div class="form-group">
-                        <label for="academic_year" class="form-label">Select Academic Year</label>
+                        <label for="academic_year" class="form-label">Select Academic Year <span style="color:red;">*</span></label>
                         <select class="form-control" id="academic_year" name="academic_year_id" required>
                             <option value="" selected>Select Academic Year</option>
                             <?php
@@ -87,7 +87,7 @@ include('./includes/topbar.php');
                     </div>
 
                     <div class="form-group">
-                      <label for="starting_month">Starting Month</label>
+                      <label for="starting_month">Starting Month <span style="color:red;">*</span></label>
                       <select id="starting_month" class="form-control" name="starting_month" required>
                           <?php 
                           $months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -99,8 +99,9 @@ include('./includes/topbar.php');
                   </div>
 
                   <div class="form-group">
-                      <label for="end_month">End Month</label>
-                      <select id="end_month" class="form-control" name="end_month" required>
+                      <label for="end_month">End Month (optional)</label>
+                      <select id="end_month" class="form-control" name="end_month">
+                        <option value="">Select End Month</option>
                           <?php 
                           foreach ($months as $month) {
                               echo "<option value='$month'>$month</option>";
@@ -118,7 +119,7 @@ include('./includes/footer.php');
 ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
-<script>
+<!-- <script>
     const requestTypeSelect = document.getElementById('request_type');
     const startingMonthSelect = document.getElementById('starting_month');
     const endMonthSelect = document.getElementById('end_month');
@@ -159,4 +160,4 @@ include('./includes/footer.php');
 
     // Array of months for easier validation
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-</script>
+</script> -->

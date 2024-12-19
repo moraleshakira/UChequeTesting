@@ -1,20 +1,40 @@
 <?php
 include('./includes/authentication.php');
+
+if (isset($_GET['id']) && !empty($_GET['id'])) {
+    $id = $_GET['id'];
+
+    $query = "DELETE FROM dtr_extracted_data WHERE id = ?";
+    $stmt = $con->prepare($query);
+
+    if ($stmt === false) {
+        die("Error preparing query: " . $con->error);
+    }   
+
+    $stmt->bind_param("i", $id);
+
+    if ($stmt->execute()) {
+        header("Location: f_dtr.php?deleted=true");
+        exit();
+    } else {
+        echo "Error deleting record: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+
 include('./includes/header.php');
 include('./includes/sidebar.php');
 include('./includes/topbar.php');
 
 $loggedInUserId = $_SESSION['auth_user']['userId']; 
 ?>
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 <div class="tabular--wrapper">
 
 <h3 class="main--title">Daily Time Record</h3>
     <div class="add">
-    <button class="btn-add" data-bs-toggle="modal" data-bs-target="#requestModal">
-        <i class='bx bxs-file-import'></i>
-        <span class="text">Request</span>
-    </button>
         </div>
         <div class="table-container">
             <?php
@@ -150,7 +170,7 @@ $loggedInUserId = $_SESSION['auth_user']['userId'];
                     <td><?php echo ($weekOverloads > 0) ? $weekOverloads : '0'; ?></td>
                     <td>
                                     <a href="#">Download</a> |
-                                    <a href="#" onclick="confirmDelete(<?php echo $row['id']; ?>)">Delete</a>
+                                    <a href="#" onclick="confirmDelete(<?php echo htmlspecialchars($row['id']); ?>)">Delete</a>
                                 </td>
                 </tr>
             <?php endwhile; ?>
@@ -160,68 +180,10 @@ $loggedInUserId = $_SESSION['auth_user']['userId'];
         </div>
         </div>
 
-        <!-- Modal -->
-        <div class="modal fade" id="requestModal" tabindex="-1" aria-labelledby="requestModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="requestModalLabel">Request for Period</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-
-                    <div class="modal-body">
-                    <form id="requestForm" method="POST" action="./controller/handle_request.php">
-                            <div class="mb-3">
-                                <label for="startMonth" class="form-label">Starting Month</label>
-                                <select id="startMonth" class="form-select" name="startMonth" required>
-                                    <option value="" disabled selected>Select Starting Month</option>
-                                    <option value="January">January</option>
-                                    <option value="February">February</option>
-                                    <option value="March">March</option>
-                                    <option value="April">April</option>
-                                    <option value="May">May</option>
-                                    <option value="June">June</option>
-                                    <option value="July">July</option>
-                                    <option value="August">August</option>
-                                    <option value="September">September</option>
-                                    <option value="October">October</option>
-                                    <option value="November">November</option>
-                                    <option value="December">December</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="endMonth" class="form-label">Ending Month</label>
-                                <select id="endMonth" class="form-select" name="endMonth" required>
-                                    <option value="" disabled selected>Select Ending Month</option>
-                                    <option value="January">January</option>
-                                    <option value="February">February</option>
-                                    <option value="March">March</option>
-                                    <option value="April">April</option>
-                                    <option value="May">May</option>
-                                    <option value="June">June</option>
-                                    <option value="July">July</option>
-                                    <option value="August">August</option>
-                                    <option value="September">September</option>
-                                    <option value="October">October</option>
-                                    <option value="November">November</option>
-                                    <option value="December">December</option>
-                                </select>
-                            </div>
-
-                            <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary">Submit Request</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-
 <?php
 include('./includes/footer.php');
 ?>
-
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 <script>
     document.getElementById('requestForm').addEventListener('submit', function (e) {
     const startMonth = document.getElementById('startMonth').value;
@@ -238,4 +200,31 @@ include('./includes/footer.php');
     }
 });
 
+const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('deleted') && urlParams.get('deleted') === 'true') {
+        Swal.fire({
+            title: 'Deleted!',
+            text: 'The record has been deleted successfully.',
+            icon: 'success',
+            confirmButtonColor: '#3085d6',
+        });
+    }
+
+    function confirmDelete(id) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "f_dtr.php?id=" + id;
+            }
+        });
+    }
+
  </script>
+

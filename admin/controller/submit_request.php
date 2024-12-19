@@ -48,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($request_type == 'Request for CTO') {
         $employee_id = $employee_ids[0];  
+        
         $query = "SELECT employee.firstName, employee.middleName, employee.lastName 
                   FROM employee 
                   INNER JOIN employee_role ON employee.userId = employee_role.userId
@@ -60,9 +61,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $employeeName = $row['firstName'] . ' ' . $row['middleName'] . ' ' . $row['lastName'];
         }
 
+        $dateRangeText = !empty($end_month) 
+            ? 'from ' . $starting_month . ' to ' . $end_month 
+            : 'for ' . $starting_month;
+
         $section->addText(
             'With reference to the approved Summary of Honoraria for the ' . $semester_name . ' S.Y. ' . 
-            $academic_year . ' from ' . $starting_month . ' to ' . $end_month . ', this is to respectfully request the ' . 
+            $academic_year . ' ' . $dateRangeText . ', this is to respectfully request the ' . 
             'Compensatory Time-Off (CTO)/Service Credits of the undersigned as shown in the table below:',
             ['size' => 10]
         );
@@ -78,7 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $itlQuery = "SELECT facultyCredit, allowableUnit, totalOverload 
                      FROM itl_extracted_data 
-                     WHERE userId = '$employee_id'";
+                     WHERE userId = '$employee_id' 
+                     AND semester_id = '$semester_id'
+                     AND academic_year_id = '$academic_year_id'";
         $itlResult = $con->query($itlQuery);
 
         $facultyCredit = $allowableUnit = $totalOverload = '';
@@ -96,6 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $table->addCell(2000)->addText($totalOverload);
         $table->addCell(2000)->addText('');
         $table->addCell(2000)->addText('');
+
     } elseif ($request_type == 'Request Letter Overload') {
         $section->addText(
             'This letter is to request your good office to allow the following faculty members under the ' . 
@@ -133,7 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $itlQuery = "SELECT facultyCredit, allowableUnit, totalOverload 
                          FROM itl_extracted_data 
-                         WHERE userId = '$employee_id'";
+                         WHERE userId = '$employee_id'
+                         AND semester_id = '$semester_id'
+                         AND academic_year_id = '$academic_year_id'";
             $itlResult = $con->query($itlQuery);
 
             $facultyCredit = $allowableUnit = $totalOverload = '';

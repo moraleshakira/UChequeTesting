@@ -6,7 +6,7 @@ include('./includes/topbar.php');
 ?>
 <div class="tabular--wrapper">
     <div class="add">
-        <div class="filter">
+        <!-- <div class="filter">
             <select id="role" onchange="updateTable()">
                 <option value="" disabled selected>For the Month of</option>
                 <option value="option1">January</option>
@@ -22,7 +22,7 @@ include('./includes/topbar.php');
                 <option value="option11">November</option>
                 <option value="option12">December</option>
             </select>
-        </div>
+        </div> -->
 
         <?php
         $sql = "SELECT academic_year_id, academic_year FROM academic_years";
@@ -37,7 +37,7 @@ include('./includes/topbar.php');
         }
         ?>
         <div class="filter">
-            <select id="academic_year">
+            <select id="academic_year" onchange="updateTable()">
                 <option value="" disabled selected>Select Academic Year</option>
                 <?php
                 foreach ($academicYears as $year) {
@@ -125,60 +125,48 @@ include('./includes/topbar.php');
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
+                <th>ID</th>
                     <th>Faculty</th>
                     <th>Designation</th>
-                    <th id="month1">August</th>
-                    <th id="month2">September</th>
-                    <th id="month3">October</th>
-                    <th id="month4">November</th>
-                    <th id="month5">December</th>
-                    <th id="month6">January</th>
-                    <th id="month7">February</th>
-                    <th id="month8">March</th>
-                    <th id="month9">April</th>
-                    <th id="month10">May</th>
-                    <th id="month11">June</th>
-                    <th id="month12">July</th>
+                    <!-- First Semester Months -->
+                    <th class="first-sem">August</th>
+                    <th class="first-sem">September</th>
+                    <th class="first-sem">October</th>
+                    <th class="first-sem">November</th>
+                    <th class="first-sem">December</th>
+                    <!-- Second Semester Months -->
+                    <th class="second-sem">January</th>
+                    <th class="second-sem">February</th>
+                    <th class="second-sem">March</th>
+                    <th class="second-sem">April</th>
+                    <th class="second-sem">May</th>
+                    <th class="second-sem">June</th>
+                    <th class="second-sem">July</th>
                 </tr>
             </thead>
             <tbody id="table-body">
                 <?php 
                 $processedUsers = [];
-
                 while ($row = $result->fetch_assoc()): 
                     if (in_array($row['userId'], $processedUsers)) {
                         continue;
                     }
                     $processedUsers[] = $row['userId'];
                 ?>
-                    <?php
-                    $weeks = [
-                        'week1' => $row['week1'],
-                        'week2' => $row['week2'],
-                        'week3' => $row['week3'],
-                        'week4' => $row['week4'],
-                        'week5' => $row['week5'],
-                    ];
-
-                    $totalOverload = $row['totalOverload'];
-                    ?>
-
                     <tr>
                         <td><?php echo htmlspecialchars($row['employeeId']); ?></td>
                         <td><?php echo htmlspecialchars($row['firstName'] . ' ' . $row['lastName']); ?></td>
                         <td><?php echo htmlspecialchars($row['designated'] ?? 'N/A'); ?></td>
 
                         <?php
-                        $monthColumns = [
-                            'August', 'September', 'October', 'November', 'December', 
-                            'January', 'February', 'March', 'April', 'May', 'June', 'July'
-                        ];
+                        $firstSemMonths = ['August', 'September', 'October', 'November', 'December'];
+                        $secondSemMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July'];
 
                         $userEntries = $con->query("SELECT * FROM dtr_extracted_data 
                             WHERE userId = {$row['userId']}");
 
-                        $monthData = array_fill_keys($monthColumns, ['credits' => 0, 'overload' => 0]);
+                        $monthData = array_fill_keys(array_merge($firstSemMonths, $secondSemMonths), 
+                            ['credits' => 0, 'overload' => 0]);
 
                         while ($entry = $userEntries->fetch_assoc()) {
                             $monthYear = date('F', strtotime($entry['month_year']));
@@ -206,8 +194,17 @@ include('./includes/topbar.php');
                             ];
                         }
 
-                        foreach ($monthColumns as $month) {
-                            echo "<td>";
+                        foreach ($firstSemMonths as $month) {
+                            echo "<td class='first-sem'>";
+                            if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
+                                echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
+                                echo "Overload: " . $monthData[$month]['overload'];
+                            }
+                            echo "</td>";
+                        }
+
+                        foreach ($secondSemMonths as $month) {
+                            echo "<td class='second-sem'>";
                             if ($monthData[$month]['credits'] > 0 || $monthData[$month]['overload'] > 0) {
                                 echo "Total Credits: " . $monthData[$month]['credits'] . "<br>";
                                 echo "Overload: " . $monthData[$month]['overload'];
@@ -227,86 +224,84 @@ include('./includes/topbar.php');
 include('./includes/footer.php');
 ?>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        let semester = document.getElementById("semester").value;
-        if (!semester) {
-            document.getElementById("semester").value = 1;
-            semester = 1; 
-        }
-        updateTable(); 
-    });
-
-    function updateTable() {
+document.addEventListener('DOMContentLoaded', function() {
     let semester = document.getElementById("semester").value;
-    let monthHeaders = document.querySelectorAll("[id^='month']");
-    let tableBody = document.getElementById("table-body");
-    let totalCreditsElement = document.getElementById("total-credits");
-    let overloadElement = document.getElementById("overload");
+    if (!semester) {
+        document.getElementById("semester").value = 1;
+        semester = 1; 
+    }
+    updateTable();
+});
 
-    monthHeaders.forEach(function(header) {
-        header.style.display = "none";
-    });
+function updateTable() {
+    let semester = document.getElementById("semester").value;
+    let firstSemCells = document.getElementsByClassName('first-sem');
+    let secondSemCells = document.getElementsByClassName('second-sem');
+
+    for (let cell of firstSemCells) {
+        cell.style.display = 'none';
+    }
+    for (let cell of secondSemCells) {
+        cell.style.display = 'none';
+    }
 
     if (semester == 1) {
-        for (let i = 0; i < 5; i++) {
-            monthHeaders[i].style.display = "table-cell";
+        for (let cell of firstSemCells) {
+            cell.style.display = 'table-cell';
         }
     } else if (semester == 2) {
-        for (let i = 5; i < 12; i++) {
-            monthHeaders[i].style.display = "table-cell";
+        for (let cell of secondSemCells) {
+            cell.style.display = 'table-cell';
         }
     }
 
     let academicYear = document.getElementById("academic_year").value;
-
     let xhr = new XMLHttpRequest();
     xhr.open("GET", "fetch_data.php?semester=" + semester + "&academic_year=" + academicYear, true);
     xhr.onload = function() {
         if (xhr.status == 200) {
             let data = JSON.parse(xhr.responseText);
+            let tableBody = document.getElementById("table-body");
             tableBody.innerHTML = '';
-            let totalCredits = 0;
-            let overload = 0;
 
             data.forEach(function(row) {
                 let tr = document.createElement("tr");
-
-                tr.innerHTML = `
-                    <td>${row.id}</td>
-                    <td>${row.faculty}</td>
-                    <td>${row.designation}</td>
-                    ${semester == 1 ? `
-                        <td>${row.august}</td>
-                        <td>${row.september}</td>
-                        <td>${row.october}</td>
-                        <td>${row.november}</td>
-                        <td>${row.december}</td>
-                    ` : `
-                        <td>${row.january}</td>
-                        <td>${row.february}</td>
-                        <td>${row.march}</td>
-                        <td>${row.april}</td>
-                        <td>${row.may}</td>
-                        <td>${row.june}</td>
-                        <td>${row.july}</td>
-                    `}
+                let basicCells = `
+                    <td>${row.employeeId}</td>
+                    <td>${row.firstName} ${row.lastName}</td>
+                    <td>${row.designated || 'N/A'}</td>
                 `;
-                tableBody.appendChild(tr);
 
-                if (semester == 1) {
-                    totalCredits += row.total_credits_first_sem;
-                    overload += row.overload_first_sem;
-                } else if (semester == 2) {
-                    totalCredits += row.total_credits_second_sem;
-                    overload += row.overload_second_sem;
-                }
+                let firstSemCells = `
+                    <td class="first-sem">${formatMonthData(row.august)}</td>
+                    <td class="first-sem">${formatMonthData(row.september)}</td>
+                    <td class="first-sem">${formatMonthData(row.october)}</td>
+                    <td class="first-sem">${formatMonthData(row.november)}</td>
+                    <td class="first-sem">${formatMonthData(row.december)}</td>
+                `;
+
+                let secondSemCells = `
+                    <td class="second-sem">${formatMonthData(row.january)}</td>
+                    <td class="second-sem">${formatMonthData(row.february)}</td>
+                    <td class="second-sem">${formatMonthData(row.march)}</td>
+                    <td class="second-sem">${formatMonthData(row.april)}</td>
+                    <td class="second-sem">${formatMonthData(row.may)}</td>
+                    <td class="second-sem">${formatMonthData(row.june)}</td>
+                    <td class="second-sem">${formatMonthData(row.july)}</td>
+                `;
+
+                tr.innerHTML = basicCells + firstSemCells + secondSemCells;
+                tableBody.appendChild(tr);
             });
 
-            totalCreditsElement.textContent = totalCredits;
-            overloadElement.textContent = overload;
+            updateTable();
         }
     };
     xhr.send();
 }
 
+function formatMonthData(data) {
+    if (!data) return '';
+    return `Total Credits: ${data.credits}<br>Overload: ${data.overload}`;
+}
 </script>

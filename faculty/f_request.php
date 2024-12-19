@@ -63,7 +63,7 @@ $loggedInUserId = $_SESSION['auth_user']['userId'];
                                 <td>" . date("F j, Y", strtotime($row['requestDate'])) . "</td>
                                 <td>" . htmlspecialchars($row['startMonth']) . "</td>
                                 <td>" . htmlspecialchars($row['endMonth']) . "</td>
-                                <td>" . htmlspecialchars($row['dateApproved']) . "</td>
+                                <td>" . date("F j, Y", strtotime($row['dateApproved'])) . "</td>
                                 <td>" . htmlspecialchars($row['status']) . "</td>
                               </tr>";
                     }
